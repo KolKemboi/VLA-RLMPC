@@ -1,0 +1,18 @@
+name: "l4acados_dev"
+services:
+  l4acados_dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: l4acados_dev
+    stdin_open: true  # Allows interactive input (-i)
+    tty: true         # Allocates pseudo-TTY (-t)
+    command: sleep infinity  # Keeps container running
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - .:/workspace
+    environment:
+      ACADOS_SOURCE_DIR: "/opt/acados"
+      LD_LIBRARY_PATH: "/opt/acados/lib"
+    working_dir: /workspace

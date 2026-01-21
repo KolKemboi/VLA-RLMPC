@@ -1,0 +1,54 @@
+[project]
+name = "l4acados"
+version = "0.0.1"
+authors = [
+    { name="Amon Lahr", email="amlahr@ethz.ch" },
+    { name="Joshua Näf", email="joshua.naef@ethz.ch" },
+]
+description = "Learning-based models for acados"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "casadi",
+    "scipy",
+    "numpy",
+]
+
+[project.optional-dependencies]
+pytorch = [
+    "torch",
+]
+gpytorch = [
+    "gpytorch",
+]
+gpytorch-exo = [
+    "linear_operator @ git+https://github.com/naefjo/linear_operator@feature/exo-gp",
+    "gpytorch @ git+https://github.com/naefjo/gpytorch@feature/exo-gp",
+]
+test = [
+    "pytest",
+    "l4casadi",
+]
+dev = [
+    "l4acados[test]",
+    "pre-commit",
+    "jupytext",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+pythonpath = "test"
+
+[tool.setuptools.packages.find]
+where = ["src"]
