@@ -71,10 +71,26 @@ RUN if [ -f "experiments/robot/libero/libero_requirements.txt" ]; then \
 #cuda absence flag
 ENV CUDA_VISIBLE_DEVICES=""
 
+RUN pip install --no-cache-dir pybullet
+
 RUN mkdir -p /workspace/models
 
-#workdir flag
-WORKDIR /workdir
 
-#bash british(init)
+
+#non root usr
+RUN apt-get update && apt-get install -y sudo && rm -rf /var/lib/apt/lists/*
+ARG USERNAME=kol
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+RUN groupadd --gid ${USER_GID} ${USERNAME} \
+    && useradd --uid ${USER_UID} --gid ${USER_GID} -m ${USERNAME} \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
+    && chmod 0440 /etc/sudoers.d/${USERNAME}
+
+USER ${USERNAME}
+
+#workdir flag
+WORKDIR /workspace
+
 CMD ["/bin/bash"]
