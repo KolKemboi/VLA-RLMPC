@@ -7,3 +7,11 @@ To build the VLA implementation, run
 
 ```
 This builds a docker based environment to develop in. It copies the openVLA implimentation and creates a working directory for code.
+To connect to the built docker container, run
+```bash
+./run.sh
+```
+To create an instance, or connect to the running container, run
+```bash
+./instance.sh
+```
