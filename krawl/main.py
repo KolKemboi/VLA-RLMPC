@@ -27,25 +27,19 @@ def viewThroughRobot(joint_count):
 
 arm_joints = []
 gripper_joints = []
-
 left_wheel_joints = []
 right_wheel_joints = []
+
+joint_name_idx = dict()
 
 for i in range(num_joints):
     joint_info = p.getJointInfo(krawlBot, i)
     joint_name = joint_info[1].decode("utf-8")
     joint_type = joint_info[2]
 
-    #get wheel joints
-    if "wheel" in joint_name.lower() and joint_type != p.JOINT_FIXED:
-        if "left" in joint_name.lower():
-            left_wheel_joints.append(i)
-        elif "right" in joint_name.lower():
-            right_wheel_joints.append(i)
+
+    if joint_type != p.JOINT_FIXED:
         print(joint_name)
-        p.setJointMotorControl2(krawlBot, i, p.VELOCITY_CONTROL, targetVelocity = 0, force = 0)
-
-    elif "gripper" in joint_name.lower() and joint_type != p.JOINT_FIXED:
         lower_lim = joint_info[8]
         upper_lim = joint_info[9]
 
@@ -61,69 +55,72 @@ for i in range(num_joints):
                 rangeMax= upper_lim,
                 startValue=start_pos
                 )
+        joint_name_idx[joint_name] = slider
 
-        gripper_joints.append(slider)
+"""
+wheel joint extraction
+using a const velocity for rear and front for easy diff nav
+"""
+RIGHT_WHEEL_VEL = 5
+LEFT_WHEEL_VEL = 5
 
+FRONT_LEFT_WHEEL = joint_name_idx.get("front_left_wheel_joint")
+REAR_LEFT_WHEEL = joint_name_idx.get("rear_left_wheel_joint")
+FRONT_RIGHT_WHEEL = joint_name_idx.get("front_right_wheel_joint")
+REAR_RIGHT_WHEEL = joint_name_idx.get("rear_right_wheel_joint")
 
-    elif "arm" in joint_name.lower() and joint_type != p.JOINT_FIXED:
-        lower_lim = joint_info[8]
-        upper_lim = joint_info[9]
-
-        if lower_lim < upper_lim:
-            start_pos = (lower_lim + upper_lim) / 2
-        else:
-            lower_lim, upper_lim = -3.14, 3.14
-            start_pos = 0
-
-        slider = p.addUserDebugParameter(
-                paramName = joint_name,
-                rangeMin = lower_lim,
-                rangeMax= upper_lim,
-                startValue=start_pos
-                )
-        arm_joints.append(slider)
-
-# left_wheel = wheel_joints[0]
-# right_wheel = wheel_joints[1]
-#
-# left_slider = p.addUserDebugParameter("Left Wheel Vel", -10, 10, 5)  # Default 5 rad/s
-# right_slider = p.addUserDebugParameter("Right Wheel Vel", -10, 10, 5)  # Default 5 rad/s
+RIGHT_VELOCITY_SLIDER = p.addUserDebugParameter("RIGHT_VELOCITY_SLIDER", -10, 10, RIGHT_WHEEL_VEL)
+LEFT_VELOCITY_SLIDER = p.addUserDebugParameter("LEFT_VELOCITY_SLIDER", -10, 10, LEFT_WHEEL_VEL)
 
 while True:
-    # left_vel = p.readUserDebugParameter(left_slider)
-    # right_vel = p.readUserDebugParameter(right_slider)
-    # 
-    # # Apply velocity control to wheels
-    # p.setJointMotorControl2(krawlBot, left_wheel, p.VELOCITY_CONTROL, 
-    #                        targetVelocity=left_vel, force=100)
-    # p.setJointMotorControl2(krawlBot, right_wheel, p.VELOCITY_CONTROL, 
-    #                        targetVelocity=right_vel, force=100)
+    #for slam
+    pos, orn = p.getBasePositionAndOrientation(krawlBot)
+    euler = p.getEulerFromQuaternion(orn)
+
+    #wheel movement logic
+    RIGHT_WHEEL_VEL = p.readUserDebugParameter(RIGHT_VELOCITY_SLIDER)
+    LEFT_WHEEL_VEL = p.readUserDebugParameter(LEFT_VELOCITY_SLIDER)
+
+    p.setJointMotorControl2(krawlBot, FRONT_LEFT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=LEFT_WHEEL_VEL, force=100)
+    p.setJointMotorControl2(krawlBot, REAR_LEFT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=LEFT_WHEEL_VEL, force=100)
+
+    p.setJointMotorControl2(krawlBot, FRONT_RIGHT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=RIGHT_WHEEL_VEL, force=100)
+    p.setJointMotorControl2(krawlBot, REAR_RIGHT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=RIGHT_WHEEL_VEL, force=100)
+    # print(pos, orn)
     #
-    # # Step simulation
-    # p.stepSimulation()
+    # for i, controller in enumerate(joint_Cont):
+    #     
+    #     target_pos = p.readUserDebugParameter(controller)
+    #     p.setJointMotorControl2(
+    #             bodyUniqueId=krawlBot,
+    #             jointIndex=i,
+    #             controlMode=p.POSITION_CONTROL,
+    #             targetPosition=target_pos,
+    #             force=500
+    #             )
+    # for i, controller in enumerate(gripper_joints):
+    #     target_pos = p.readUserDebugParameter(controller)
+    #     p.setJointMotorControl2(
+    #             bodyUniqueId=krawlBot,
+    #             jointIndex=i,
+    #             controlMode=p.POSITION_CONTROL,
+    #             targetPosition=target_pos,
+    #             force=500
+    #             )
+    # for joint_name, idx in joint_name_idx.items():
+    #     if "wheel" in joint_name.lower():
+    #         target_pos = p.readUserDebugParameter(idx)
     #
-    # # Get robot position for feedback
-    # pos, orn = p.getBasePositionAndOrientation(krawlBot)
-    # euler = p.getEulerFromQuaternion(orn)
-    #
-    for i, controller in enumerate(arm_joints):
-        target_pos = p.readUserDebugParameter(controller)
-        p.setJointMotorControl2(
-                bodyUniqueId=krawlBot,
-                jointIndex=i,
-                controlMode=p.POSITION_CONTROL,
-                targetPosition=target_pos,
-                force=500
-                )
-    for i, controller in enumerate(gripper_joints):
-        target_pos = p.readUserDebugParameter(controller)
-        p.setJointMotorControl2(
-                bodyUniqueId=krawlBot,
-                jointIndex=i,
-                controlMode=p.POSITION_CONTROL,
-                targetPosition=target_pos,
-                force=500
-                )
+    #         p.setJointMotorControl2(
+    #                 bodyUniqueId=krawlBot,
+    #                 jointIndex=idx,
+    #                 controlMode=p.VELOCITY_CONTROL,
+    #                 targetPosition=target_pos,
+    #                 force=500
+    #                 )
+
+
+
 
     p.stepSimulation()
     time.sleep(1./240.)
