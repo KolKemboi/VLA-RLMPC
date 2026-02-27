@@ -1,10 +1,6 @@
 import pybullet as p
 import time
 import pybullet_data 
-import wheel_logic
-
-WHEEL_DIST_FROM_ROBOT_CENTER = 0.2 #in metres
-
 
 #env set up(gravity, ground) and robot loading 
 phyCl = p.connect(p.GUI)
@@ -27,7 +23,6 @@ def viewThroughRobot(joint_count):
 #uncomment below for transparency
 # viewThroughRobot(num_joints)
 
-
 joint_name_idx = dict()
 arm_joints = dict()
 gripper_joints = dict()
@@ -40,8 +35,22 @@ for i in range(num_joints):
     if joint_type != p.JOINT_FIXED:
         joint_name_idx[joint_name] = i
 
-wheel = wheel_logic.WheelLogic(krawlBot, joint_name_idx)
-wheel.set_debug_param()
+#
+# """
+# wheel joint extraction
+# using a const velocity for rear and front for easy diff nav
+# """
+RIGHT_WHEEL_VEL = 1
+LEFT_WHEEL_VEL = 1
+
+FRONT_LEFT_WHEEL = joint_name_idx.get("front_left_wheel_joint")
+REAR_LEFT_WHEEL = joint_name_idx.get("rear_left_wheel_joint")
+FRONT_RIGHT_WHEEL = joint_name_idx.get("front_right_wheel_joint")
+REAR_RIGHT_WHEEL = joint_name_idx.get("rear_right_wheel_joint")
+
+RIGHT_VELOCITY_SLIDER = p.addUserDebugParameter("RIGHT_VELOCITY_SLIDER", -10, 10, RIGHT_WHEEL_VEL)
+LEFT_VELOCITY_SLIDER = p.addUserDebugParameter("LEFT_VELOCITY_SLIDER", -10, 10, LEFT_WHEEL_VEL)
+
 
 for joint_name, idx in joint_name_idx.items():
     print(joint_name, idx)
@@ -66,26 +75,21 @@ for joint_name, idx in joint_name_idx.items():
 
 
 
-start_time = time.perf_counter()
 
 while True:
     #for slam
     pos, orn = p.getBasePositionAndOrientation(krawlBot)
     euler = p.getEulerFromQuaternion(orn)
 
-    # print(euler)
-
     # #wheel movement logic
-    wheel.forward_movement()
-    # wheel.right_turn(euler)
+    RIGHT_WHEEL_VEL = p.readUserDebugParameter(RIGHT_VELOCITY_SLIDER)
+    LEFT_WHEEL_VEL = p.readUserDebugParameter(LEFT_VELOCITY_SLIDER)
 
-    if (time.perf_counter() - start_time) >= 2:
-        wheel.turn(20)
+    p.setJointMotorControl2(krawlBot, FRONT_LEFT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=LEFT_WHEEL_VEL, force=100)
+    p.setJointMotorControl2(krawlBot, REAR_LEFT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=LEFT_WHEEL_VEL, force=100)
 
-    if (time.perf_counter() - start_time) >= 7:
-        wheel.restore_vel()
-
-    # print(wheel.right_wheel_vel)
+    p.setJointMotorControl2(krawlBot, FRONT_RIGHT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=RIGHT_WHEEL_VEL, force=100)
+    p.setJointMotorControl2(krawlBot, REAR_RIGHT_WHEEL, p.VELOCITY_CONTROL, targetVelocity=RIGHT_WHEEL_VEL, force=100)
 
     for joint_name, idx in arm_joints.items():
         target_pos = p.readUserDebugParameter(idx)
@@ -106,6 +110,7 @@ while True:
                 targetPosition = target_pos,
                 force = 100
                 )
+
 
 
     p.stepSimulation()
