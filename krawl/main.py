@@ -2,9 +2,15 @@ import pybullet as p
 import time
 import pybullet_data 
 import wheel_logic
+import lidar
+import numpy  as np
+
+
 
 WHEEL_DIST_FROM_ROBOT_CENTER = 0.2 #in metres
-
+LIDAR_RANGE = 10.0 
+NUM_RAYS = 36
+LIDAR_HEIGHT = 0.2  
 
 #env set up(gravity, ground) and robot loading 
 phyCl = p.connect(p.GUI)
@@ -44,7 +50,7 @@ wheel = wheel_logic.WheelLogic(krawlBot, joint_name_idx)
 wheel.set_debug_param()
 
 for joint_name, idx in joint_name_idx.items():
-    print(joint_name, idx)
+    # print(joint_name, idx)
     if "arm" in joint_name.lower():
         lower_lim = -3.14
         upper_lim = 3.14
@@ -68,22 +74,62 @@ for joint_name, idx in joint_name_idx.items():
 
 start_time = time.perf_counter()
 
+#for slam
+robot_lidar = lidar.LidarSensor(krawlBot)
+
+link_state = p.getLinkState(krawlBot, 0)
+robot_base_pose = link_state[0]
+robot_base_orn = link_state[1]
+robot_base_yaw = p.getEulerFromQuaternion(robot_base_orn)[2]
+
+
+# cube size (half extents)
+half_size = [0.5, 0.5, 0.5]
+
+# create collision and visual shape
+collision = p.createCollisionShape(
+    shapeType=p.GEOM_BOX,
+    halfExtents=half_size
+)
+
+visual = p.createVisualShape(
+    shapeType=p.GEOM_BOX,
+    halfExtents=half_size,
+    rgbaColor=[1, 0, 0, 1]
+)
+
+# create the cube body
+cube_id = p.createMultiBody(
+    baseMass=1.0,
+    baseCollisionShapeIndex=collision,
+    baseVisualShapeIndex=visual,
+    basePosition=[3, 3, 0]
+)
+    
+
+
 while True:
-    #for slam
-    pos, orn = p.getBasePositionAndOrientation(krawlBot)
-    euler = p.getEulerFromQuaternion(orn)
+    
+
+    base_pos, base_orn = p.getBasePositionAndOrientation(krawlBot)
+    euler = p.getEulerFromQuaternion(base_orn)
+    base_z_rot = euler[2]
+    robot_lidar.project_lidar(base_pos, base_orn)
+    robot_lidar.object_detection()
+    # robot_lidar.render_rays()
 
     # print(euler)
 
-    # #wheel movement logic
-    wheel.forward_movement()
-    # wheel.right_turn(euler)
-
-    if (time.perf_counter() - start_time) >= 2:
-        wheel.turn(20)
-
-    if (time.perf_counter() - start_time) >= 7:
-        wheel.restore_vel()
+    # # #wheel movement logic
+    # wheel.forward_movement()
+    # # wheel.right_turn(euler)
+    #
+    # #turning test
+    # if (time.perf_counter() - start_time) >= 2:
+    #     wheel.turn(20)
+    #
+    # if (time.perf_counter() - start_time) >= 7:
+    #     wheel.restore_vel()
 
     # print(wheel.right_wheel_vel)
 
