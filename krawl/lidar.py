@@ -4,7 +4,12 @@ import time
 import math
 
 class LidarSensor:
-    def __init__(self,robot, LIDAR_RANGE = 59.0, NUM_RAYS = 360, LIDAR_HEIGHT = 0.2) -> None:
+    """
+    on_class init, it creates basic lidar constants
+    also, keep the num rays minimum, 36 is chosen for every 10deg interval.
+    a high number of rays slows down the simulation
+    """
+    def __init__(self,robot, LIDAR_RANGE = 59.0, NUM_RAYS = 36, LIDAR_HEIGHT = 0.2) -> None:
         #all the distances are in Metres
         self.robot = robot
         self.lidar_range = LIDAR_RANGE
@@ -13,7 +18,11 @@ class LidarSensor:
         self.ray_origin = list()
         self.ray_destination = list()
         self.results = list()
-
+    """
+    projects the lidar from lidar origin outwards and collects any hit
+    and hits are stored in self.results, the len of which can be at most 
+    the number of rays
+    """
     def project_lidar(self, robot_pos, robot_orn, start_time):
         self.ray_origin.clear()
         self.ray_destination.clear()
@@ -39,6 +48,12 @@ class LidarSensor:
 
             self.results = p.rayTestBatch(self.ray_origin, self.ray_destination)
 
+    """
+    grabs the results and checks if it is a self hit or if there is nothing on the
+    lidar
+    otherwise, it returns the hit location and distance. 
+    this is used for pygame viz and future data for l4acados
+    """
     def object_detection(self):
         self.hit_locations = []
         for result in self.results:
@@ -53,9 +68,10 @@ class LidarSensor:
             distance = result[2]
             self.hit_locations.append(hit_position)
         return self.hit_locations
-
-
-
+    
+    """
+    this is to render the rays, this is for debug purposes, and might slow down the simulation if called
+    """
     def render_rays(self):
         for i, result in enumerate(self.results):
             object_id = result[0]
