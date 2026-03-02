@@ -1,8 +1,10 @@
 import pybullet as p
 import numpy as np
+import time
+import math
 
 class LidarSensor:
-    def __init__(self,robot, LIDAR_RANGE = 10.0, NUM_RAYS = 36, LIDAR_HEIGHT = 0.2) -> None:
+    def __init__(self,robot, LIDAR_RANGE = 59.0, NUM_RAYS = 360, LIDAR_HEIGHT = 0.2) -> None:
         #all the distances are in Metres
         self.robot = robot
         self.lidar_range = LIDAR_RANGE
@@ -12,29 +14,30 @@ class LidarSensor:
         self.ray_destination = list()
         self.results = list()
 
-    def project_lidar(self, robot_pos, robot_orn):
+    def project_lidar(self, robot_pos, robot_orn, start_time):
         self.ray_origin.clear()
         self.ray_destination.clear()
         self.robot_pos = robot_pos
         self.robot_orn = robot_orn
         self.robot_yaw = p.getEulerFromQuaternion(self.robot_orn)[2]
 
-        for i in range(self.num_rays):
-            angle = self.robot_yaw + (2 * np.pi * i / self.num_rays)
-            origin_point = [
-                    self.robot_pos[0],
-                    self.robot_pos[1],
-                    self.robot_pos[2] + self.lidar_height,
-                    ]
-            destination_point = [
-                    self.robot_pos[0] + self.lidar_range * np.cos(angle),
-                    self.robot_pos[1] + self.lidar_range * np.sin(angle),
-                    self.robot_pos[2] + self.lidar_height
-                    ]
-            self.ray_origin.append(origin_point)
-            self.ray_destination.append(destination_point)
+        if ( math.ceil(time.perf_counter() - start_time) ) % 2 != 0:
+            for i in range(self.num_rays):
+                angle = self.robot_yaw + (2 * np.pi * i / self.num_rays)
+                origin_point = [
+                        self.robot_pos[0],
+                        self.robot_pos[1],
+                        self.robot_pos[2] + self.lidar_height,
+                        ]
+                destination_point = [
+                        self.robot_pos[0] + self.lidar_range * np.cos(angle),
+                        self.robot_pos[1] + self.lidar_range * np.sin(angle),
+                        self.robot_pos[2] + self.lidar_height
+                        ]
+                self.ray_origin.append(origin_point)
+                self.ray_destination.append(destination_point)
 
-        self.results = p.rayTestBatch(self.ray_origin, self.ray_destination)
+            self.results = p.rayTestBatch(self.ray_origin, self.ray_destination)
 
     def object_detection(self):
         self.hit_locations = []
@@ -48,7 +51,8 @@ class LidarSensor:
 
             hit_position = result[3]
             distance = result[2]
-            print(f"hit at {hit_position}, distance {distance}")
+            self.hit_locations.append(hit_position)
+        return self.hit_locations
 
 
 

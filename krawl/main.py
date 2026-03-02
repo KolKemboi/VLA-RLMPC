@@ -3,7 +3,42 @@ import time
 import pybullet_data 
 import wheel_logic
 import lidar
-import numpy  as np
+import pygame
+import numpy as np
+import math
+
+WINDOW_HEIGHT = 480
+WINDOW_WIDTH = 480
+RADIANS_CONST = 57
+pygame.init()
+WINDOW = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+clock = pygame.time.Clock()
+"""
+So to change the coordinate system from left top center to
+mid center
+""" 
+WINDOW_WIDTH_CENTER = WINDOW_WIDTH / 2
+WINDOW_HEIGHT_CENTER = WINDOW_HEIGHT / 2
+"""
+rectangle centering logic
+
+"""
+def center_circle(circle_center_x, circle_center_y):
+    new_center_x = circle_center_x + WINDOW_WIDTH_CENTER
+    new_center_y = circle_center_y + WINDOW_HEIGHT_CENTER
+
+    return (new_center_x, new_center_y)
+
+
+def center_rect(x_pos, y_pos, width, height):
+    """
+    I give in the wanted coodinats, I transform it to fit the pygame
+    window
+    """
+    new_x_pos = ( x_pos + WINDOW_WIDTH_CENTER ) - ( width / 2 ) 
+    new_y_pos = ( y_pos + WINDOW_HEIGHT_CENTER ) - ( height / 2 )
+
+    return [new_x_pos, new_y_pos, width, height]
 
 
 
@@ -103,9 +138,27 @@ cube_id = p.createMultiBody(
     baseMass=1.0,
     baseCollisionShapeIndex=collision,
     baseVisualShapeIndex=visual,
-    basePosition=[3, 3, 0]
+    basePosition=[1, 1, 0]
 )
     
+collision = p.createCollisionShape(
+    shapeType=p.GEOM_BOX,
+    halfExtents=half_size
+)
+
+visual = p.createVisualShape(
+    shapeType=p.GEOM_BOX,
+    halfExtents=half_size,
+    rgbaColor=[1, 0, 0, 1]
+)
+
+# create the cube body
+cube_id = p.createMultiBody(
+    baseMass=1.0,
+    baseCollisionShapeIndex=collision,
+    baseVisualShapeIndex=visual,
+    basePosition=[1, -2, 0]
+)
 
 
 while True:
@@ -114,22 +167,24 @@ while True:
     base_pos, base_orn = p.getBasePositionAndOrientation(krawlBot)
     euler = p.getEulerFromQuaternion(base_orn)
     base_z_rot = euler[2]
-    robot_lidar.project_lidar(base_pos, base_orn)
-    robot_lidar.object_detection()
+    robot_lidar.project_lidar(base_pos, base_orn, start_time)
+    ray_hit_location = robot_lidar.object_detection()
+    # print(ray_hit_location)
     # robot_lidar.render_rays()
 
     # print(euler)
 
     # # #wheel movement logic
-    # wheel.forward_movement()
+    wheel.forward_movement()
     # # wheel.right_turn(euler)
     #
-    # #turning test
-    # if (time.perf_counter() - start_time) >= 2:
-    #     wheel.turn(20)
-    #
-    # if (time.perf_counter() - start_time) >= 7:
-    #     wheel.restore_vel()
+    #turning test
+    print(math.ceil(time.perf_counter() - start_time))
+    if (time.perf_counter() - start_time) >= 2:
+        wheel.turn(20)
+
+    if (time.perf_counter() - start_time) >= 7:
+        wheel.restore_vel()
 
     # print(wheel.right_wheel_vel)
 
@@ -157,5 +212,33 @@ while True:
     p.stepSimulation()
     time.sleep(1./240.)
 
-p.disconnect()
 
+    for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+
+    WINDOW.fill("purple")
+
+    rect_coordinates = center_rect(base_pos[1]*100, base_pos[0]*100, 30, 50)
+    rect = pygame.Rect(rect_coordinates)
+    rect_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    pygame.draw.rect(rect_surf, "red", (0, 0, rect.width, rect.height))
+    rotated_surf = pygame.transform.rotate(rect_surf, np.rad2deg(base_z_rot))
+    rotated_rect = rotated_surf.get_rect(center=rect.center)
+
+    if ray_hit_location:
+        for ray_hit in ray_hit_location:
+            circle_center = center_circle(ray_hit[1]*100, ray_hit[0]*100)
+            pygame.draw.circle(WINDOW, "black", circle_center, 1)
+
+
+    WINDOW.blit(rotated_surf, rotated_rect)
+        
+
+
+
+    pygame.display.flip()
+    clock.tick(60)
+
+p.disconnect()
+pygame.quit()
