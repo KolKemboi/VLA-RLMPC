@@ -1,4 +1,6 @@
+cvzone==1.6.1
 numpy==2.2.6
+opencv-python==4.13.0.92
 pybullet==3.2.7
 pygame==2.6.1
 pyyaml==6.0.3

@@ -6,6 +6,9 @@ import lidar
 import pygame
 import math
 import bullet_map
+import numpy as np
+import camera
+import robot_povs
 
 WINDOW_HEIGHT = 640
 WINDOW_WIDTH = 640
@@ -28,6 +31,25 @@ phyCl = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 p.setGravity(0, 0, -10)
 planeId = p.loadURDF("plane.urdf")
+obj_file_path = "../../../test.obj"
+
+# Create a visual shape from the .obj file
+visual_shape_id = p.createVisualShape(shapeType=p.GEOM_MESH,
+                                      fileName=obj_file_path,
+                                      meshScale=[1, 1, 1])
+
+# Create a collision shape from the .obj file (for non-concave or decomposed meshes)
+collision_shape_id = p.createCollisionShape(shapeType=p.GEOM_MESH,
+                                          fileName=obj_file_path,
+                                          meshScale=[1, 1, 1])
+
+# Create a multi-body object using the shapes
+# useBaseCollisionShapeIndex and useBaseVisualShapeIndex refer to the IDs created above
+# mass of 0 makes it a static object
+object_id = p.createMultiBody(baseMass=0,
+                              baseCollisionShapeIndex=collision_shape_id,
+                              baseVisualShapeIndex=visual_shape_id,
+                              basePosition=[0, 0, 0])
 startPos = [0, 0, 0]
 startOr = p.getQuaternionFromEuler([0, 0, 0])
 krawlBot = p.loadURDF("./krawl/urdf/krawl.urdf", startPos, startOr)
@@ -91,42 +113,72 @@ robot_lidar = lidar.LidarSensor(krawlBot)
 
 
 # cube size (half extents)
-half_size = [0.5, 0.5, 0.5]
-
-# create collision and visual shape
-collision = p.createCollisionShape(
-    shapeType=p.GEOM_BOX,
-    halfExtents=half_size
-)
-
-visual = p.createVisualShape(
-    shapeType=p.GEOM_BOX,
-    halfExtents=half_size,
-    rgbaColor=[1, 0, 0, 1]
-)
-
-# create the cube body
-cube_id = p.createMultiBody(
-    baseMass=1.0,
-    baseCollisionShapeIndex=collision,
-    baseVisualShapeIndex=visual,
-    basePosition=[1, 1, 0]
-)
+# half_size = [0.5, 0.5, 0.5]
+#
+# # create collision and visual shape
+# collision = p.createCollisionShape(
+#     shapeType=p.GEOM_BOX,
+#     halfExtents=half_size
+# )
+#
+# visual = p.createVisualShape(
+#     shapeType=p.GEOM_BOX,
+#     halfExtents=half_size,
+#     rgbaColor=[1, 0, 0, 1]
+# )
+#
+# # create the cube body
+# cube_id = p.createMultiBody(
+#     baseMass=1.0,
+#     baseCollisionShapeIndex=collision,
+#     baseVisualShapeIndex=visual,
+#     basePosition=[1, 1, 0]
+# )
     
 
+####CAMERA STUFF
+robot_camera = camera.Camera()
+robot_pov = robot_povs.renderImages()
 
 while True:
+    """
+    gets the robot current tranform
     
-
+    """
     base_pos, base_orn = p.getBasePositionAndOrientation(krawlBot)
     euler = p.getEulerFromQuaternion(base_orn)
     base_z_rot = euler[2]
+    rot_matrix = np.array(p.getMatrixFromQuaternion(base_orn)).reshape(3, 3)
+
+    """
+    gets and displays the four views of the robot for debug 
+    """
+    forward_image = robot_camera.forward(base_pos, base_orn)
+    back_image = robot_camera.backward(base_pos, base_orn)
+    left_image = robot_camera.left(base_pos, base_orn)
+    right_image = robot_camera.right(base_pos, base_orn)
+    robot_pov.grid(forward_image, back_image, left_image, right_image)
+
+    """
+    sets up lidar and displays it for debug
+    """
     robot_lidar.project_lidar(base_pos, base_orn, start_time)
     ray_hit_location = robot_lidar.object_detection()
 
-    # # #wheel movement logic
+    for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+
+    WINDOW.fill("purple")
+    env_map.draw_robot_frame(base_pos, ROBOT_WIDTH,ROBOT_LENGTH, base_z_rot)
+    env_map.render_lidar(ray_hit_location)
+
+    pygame.display.flip()
+    clock.tick(60)
+
+    # #wheel movement logic
     wheel.forward_movement()
-    #turning test
+    # turning test
     if (time.perf_counter() - start_time) >= 2:
         wheel.turn(20)
 
@@ -159,16 +211,6 @@ while True:
     time.sleep(1./240.)
 
 
-    for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-
-    WINDOW.fill("purple")
-    env_map.draw_robot_frame(base_pos, ROBOT_WIDTH,ROBOT_LENGTH, base_z_rot)
-    env_map.render_lidar(ray_hit_location)
-
-    pygame.display.flip()
-    clock.tick(60)
 
 p.disconnect()
 pygame.quit()

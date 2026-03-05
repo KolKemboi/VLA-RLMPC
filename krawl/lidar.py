@@ -9,7 +9,7 @@ class LidarSensor:
     also, keep the num rays minimum, 36 is chosen for every 10deg interval.
     a high number of rays slows down the simulation
     """
-    def __init__(self,robot, LIDAR_RANGE = 59.0, NUM_RAYS = 36, LIDAR_HEIGHT = 0.2) -> None:
+    def __init__(self,robot, LIDAR_RANGE = 59.0, NUM_RAYS = 36, LIDAR_HEIGHT = 0.05) -> None:
         #all the distances are in Metres
         self.robot = robot
         self.lidar_range = LIDAR_RANGE
