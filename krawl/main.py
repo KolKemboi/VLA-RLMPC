@@ -31,7 +31,7 @@ phyCl = p.connect(p.GUI)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 p.setGravity(0, 0, -10)
 planeId = p.loadURDF("plane.urdf")
-obj_file_path = "../../../test.obj"
+obj_file_path = "./test_environment/test.obj"
 
 # Create a visual shape from the .obj file
 visual_shape_id = p.createVisualShape(shapeType=p.GEOM_MESH,
@@ -176,6 +176,10 @@ while True:
     pygame.display.flip()
     clock.tick(60)
 
+
+    """
+    wheel movement 
+    """
     # #wheel movement logic
     wheel.forward_movement()
     # turning test
